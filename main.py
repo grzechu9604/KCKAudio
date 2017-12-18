@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import soundfile as sf
 
 
-def load_sound_frames(path):
+def load_sound(path):
 
     data, sound_file = sf.read(path)
 
@@ -21,13 +21,29 @@ def get_block(tab, start_with, size):
     return block_to_return
 
 
-def get_answer(blocks):
-    return 'K'
+def get_answer(frequency, function_threshold):
+    if frequency > function_threshold:
+        return 'K'
+    else:
+        return 'M'
+
+
+def get_frequency_for_one_block(block):
+    return 140
+
+def get_frequency_for_blocks(blocks):
+    frequencies = []
+    for i in blocks:
+        frequencies.append(get_frequency_for_one_block(i))
+
+    return 140
 
 
 if __name__ == '__main__':
+    minimal_mistake = 100000
     best_threshold = 140
     threshold = 140
+    block_size = 2048
     threshold_change = 5
     women_answer = 'k'
     men_answer = 'm'
@@ -35,25 +51,39 @@ if __name__ == '__main__':
     km = 0
     mm = 0
     mk = 0
-    for i in glob.glob("./*.wav"):
-        frames = load_sound_frames(i)
-        correct_answer = i[-5:-4]
-        block = get_block(frames, 0, 2048)
-        plt.plot(block)
-        plt.show()
-        answer = get_answer(block)
-        if answer == correct_answer == women_answer:
-            kk += 1
-        elif answer == correct_answer == men_answer:
-            mm += 1
-        elif answer == 'k':
-            km += 1
+
+    while True:
+        for i in glob.glob("./*.wav"):
+            correct_answer = i[-5:-4]
+
+            sound_file = load_sound(i)
+            blocks = []
+            for start_int in range (0, len(sound_file), block_size):
+                blocks.append(get_block(sound_file, start_int, block_size))
+
+            #plt.plot(block)
+            #plt.show()
+
+            freq = get_frequency_for_blocks(blocks)
+            answer = get_answer(freq, threshold)
+
+            if answer == correct_answer == women_answer:
+                kk += 1
+            elif answer == correct_answer == men_answer:
+                mm += 1
+            elif answer == 'k':
+                km += 1
+            else:
+                mk += 1
+
+        if km > mk:
+            threshold += threshold_change
+        elif km < mk:
+            threshold -= threshold_change
+
+        if minimal_mistake > km + mk:
+            minimal_mistake = km + mk
         else:
-            mk += 1
+            break
 
-    if km > mk:
-        threshold += threshold_change
-    elif km < mk:
-        threshold -= threshold_change
-
-    print(threshold)
+    print(threshold, minimal_mistake)
