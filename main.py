@@ -3,13 +3,7 @@ import glob
 import matplotlib.pyplot as plt
 import statistics as stat
 import soundfile as sf
-
-
-def load_sound(path):
-
-    data, sound_file = sf.read(path)
-
-    return data
+import numpy as np
 
 
 def get_block(tab, start_with, size):
@@ -31,8 +25,10 @@ def get_answer(frequency, function_threshold):
 
 def filter_frequencies(frequencies, lower_limit, upper_limit):
     frequencies = delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit)
-    frequencies.remove(max(frequencies))
-    frequencies.remove(min(frequencies))
+    if len(frequencies) > 0:
+        frequencies.remove(max(frequencies))
+    if len(frequencies) > 0:
+        frequencies.remove(min(frequencies))
     return frequencies
 
 
@@ -44,14 +40,20 @@ def delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit):
     return filtered_frequencies
 
 
-def get_frequency_for_one_block(block):
+def get_frequency_for_one_block(block, freq_width):
+    freqencies = abs(np.fft.rfft(block))
+
+    i = np.argmax(freqencies)
+
+    freq = max(abs(freqencies))
     return 140
 
 
-def get_frequency_for_blocks(blocks, lower_limit, upper_limit):
+def get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width):
     frequencies = []
+
     for block in blocks:
-        frequencies.append(get_frequency_for_one_block(block))
+        frequencies.append(get_frequency_for_one_block(block, freq_width))
 
     frequencies = filter_frequencies(frequencies, lower_limit, upper_limit)
 
@@ -65,29 +67,26 @@ if __name__ == '__main__':
     women_answer = 'k'
     men_answer = 'm'
 
-    best_threshold = 140
-    threshold = 140
+    best_threshold = threshold = 135
     threshold_change = 5
     minimal_mistake = 100000
 
-    kk = 0
-    km = 0
-    mm = 0
-    mk = 0
-
     while True:
+
+        kk = km = mm = mk = 0
+
         for i in glob.glob("./*.wav"):
             correct_answer = i[-5:-4]
 
-            sound_file = load_sound(i)
+            sound_file, freq_width = sf.read(i)
             blocks = []
-            for start_int in range (0, len(sound_file), block_size):
+            for start_int in range(0, len(sound_file), block_size):
                 blocks.append(get_block(sound_file, start_int, block_size))
 
             #plt.plot(block)
             #plt.show()
 
-            freq = get_frequency_for_blocks(blocks, lower_limit, upper_limit)
+            freq = get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width)
             answer = get_answer(freq, threshold)
 
             if answer == correct_answer == women_answer:
