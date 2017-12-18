@@ -1,6 +1,7 @@
 import glob
 
 import matplotlib.pyplot as plt
+import statistics as stat
 import soundfile as sf
 
 
@@ -28,25 +29,47 @@ def get_answer(frequency, function_threshold):
         return 'M'
 
 
+def filter_frequencies(frequencies, lower_limit, upper_limit):
+    frequencies = delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit)
+    frequencies.remove(max(frequencies))
+    frequencies.remove(min(frequencies))
+    return frequencies
+
+
+def delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit):
+    filtered_frequencies = []
+    for frequency in frequencies:
+        if lower_limit < frequency < upper_limit:
+            filtered_frequencies.append(frequency)
+    return filtered_frequencies
+
+
 def get_frequency_for_one_block(block):
     return 140
 
-def get_frequency_for_blocks(blocks):
-    frequencies = []
-    for i in blocks:
-        frequencies.append(get_frequency_for_one_block(i))
 
-    return 140
+def get_frequency_for_blocks(blocks, lower_limit, upper_limit):
+    frequencies = []
+    for block in blocks:
+        frequencies.append(get_frequency_for_one_block(block))
+
+    frequencies = filter_frequencies(frequencies, lower_limit, upper_limit)
+
+    return stat.median(frequencies)
 
 
 if __name__ == '__main__':
-    minimal_mistake = 100000
-    best_threshold = 140
-    threshold = 140
     block_size = 2048
-    threshold_change = 5
+    upper_limit = 440
+    lower_limit = 70
     women_answer = 'k'
     men_answer = 'm'
+
+    best_threshold = 140
+    threshold = 140
+    threshold_change = 5
+    minimal_mistake = 100000
+
     kk = 0
     km = 0
     mm = 0
@@ -64,7 +87,7 @@ if __name__ == '__main__':
             #plt.plot(block)
             #plt.show()
 
-            freq = get_frequency_for_blocks(blocks)
+            freq = get_frequency_for_blocks(blocks, lower_limit, upper_limit)
             answer = get_answer(freq, threshold)
 
             if answer == correct_answer == women_answer:
