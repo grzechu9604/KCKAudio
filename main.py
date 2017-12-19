@@ -1,9 +1,15 @@
 import glob
-
-import matplotlib.pyplot as plt
 import statistics as stat
 import soundfile as sf
 import numpy as np
+
+
+def get_first_chanel(tab):
+    if type(tab[0]) in (tuple, list, np.ndarray):
+        first_chanel = [x[0] for x in tab[:]]
+        return first_chanel
+    else:
+        return tab
 
 
 def get_block(tab, start_with, size):
@@ -23,8 +29,7 @@ def get_answer(frequency, function_threshold):
         return 'M'
 
 
-def filter_frequencies(frequencies, lower_limit, upper_limit):
-    frequencies = delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit)
+def filter_frequencies(frequencies):
     if len(frequencies) > 0:
         frequencies.remove(max(frequencies))
     if len(frequencies) > 0:
@@ -32,28 +37,33 @@ def filter_frequencies(frequencies, lower_limit, upper_limit):
     return frequencies
 
 
-def delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit):
+def delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit, freq_width):
     filtered_frequencies = []
-    for frequency in frequencies:
-        if lower_limit < frequency < upper_limit:
-            filtered_frequencies.append(frequency)
+
+    for i in range(0, len(frequencies)):
+        if lower_limit < i * freq_width / len(frequencies) < upper_limit:
+            filtered_frequencies.append(frequencies[i])
+        else:
+            filtered_frequencies.append(0)
+
     return filtered_frequencies
 
 
-def get_frequency_for_one_block(block, freq_width):
-    freqencies = abs(np.fft.rfft(block))
+def get_frequency_for_one_block(block, lower_limit, upper_limit, freq_width):
+    frequencies = abs(np.fft.fft(block))
 
-    i = np.argmax(freqencies)
+    filtered_frequencies = delete_frequencies_out_of_range(frequencies, lower_limit, upper_limit, freq_width)
 
-    freq = max(abs(freqencies))
-    return 140
+    max_arg = np.argmax(filtered_frequencies)
+
+    return max_arg * freq_width / len(frequencies)
 
 
 def get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width):
     frequencies = []
 
     for block in blocks:
-        frequencies.append(get_frequency_for_one_block(block, freq_width))
+        frequencies.append(get_frequency_for_one_block(block, freq_width,  lower_limit, upper_limit))
 
     frequencies = filter_frequencies(frequencies, lower_limit, upper_limit)
 
@@ -61,39 +71,42 @@ def get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width):
 
 
 if __name__ == '__main__':
-    block_size = 2048
-    upper_limit = 440
+    block_size = 4096
+    upper_limit = 350
     lower_limit = 70
-    women_answer = 'k'
-    men_answer = 'm'
+    women_answer = 'K'
+    men_answer = 'M'
 
-    best_threshold = threshold = 135
-    threshold_change = 5
+    best_threshold = threshold = 162
+    threshold_change = 1
     minimal_mistake = 100000
 
     while True:
 
         kk = km = mm = mk = 0
 
-        for i in glob.glob("./*.wav"):
+        for i in glob.glob("./train/*.wav"):
             correct_answer = i[-5:-4]
 
             sound_file, freq_width = sf.read(i)
-            blocks = []
-            for start_int in range(0, len(sound_file), block_size):
-                blocks.append(get_block(sound_file, start_int, block_size))
+            first_chanel_only = get_first_chanel(sound_file)
 
-            #plt.plot(block)
-            #plt.show()
+            frequencies = []
+            for start_with in range(0, len(first_chanel_only), block_size):
+                block = get_block(first_chanel_only, start_with, block_size)
+                frequencies.append(get_frequency_for_one_block(block, lower_limit, upper_limit, freq_width))
 
-            freq = get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width)
+            freq = np.median(frequencies)
+
             answer = get_answer(freq, threshold)
+
+            print(freq, answer, correct_answer)
 
             if answer == correct_answer == women_answer:
                 kk += 1
             elif answer == correct_answer == men_answer:
                 mm += 1
-            elif answer == 'k':
+            elif answer == women_answer:
                 km += 1
             else:
                 mk += 1
@@ -102,8 +115,9 @@ if __name__ == '__main__':
             threshold += threshold_change
         elif km < mk:
             threshold -= threshold_change
+        print(mm, kk, km, mk)
 
-        if minimal_mistake > km + mk:
+        if minimal_mistake >= km + mk:
             minimal_mistake = km + mk
         else:
             break
