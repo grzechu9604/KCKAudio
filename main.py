@@ -77,49 +77,34 @@ if __name__ == '__main__':
     women_answer = 'K'
     men_answer = 'M'
 
-    best_threshold = threshold = 157
-    threshold_change = 1
-    minimal_mistake = 100000
+    threshold = 157
 
-    while True:
+    kk = km = mm = mk = 0
 
-        kk = km = mm = mk = 0
+    for i in glob.glob("./train/*.wav"):
+        correct_answer = i[-5:-4]
 
-        for i in glob.glob("./train/*.wav"):
-            correct_answer = i[-5:-4]
+        sound_file, freq_width = sf.read(i)
+        first_chanel_only = get_first_chanel(sound_file)
 
-            sound_file, freq_width = sf.read(i)
-            first_chanel_only = get_first_chanel(sound_file)
+        frequencies = []
+        for start_with in range(0, len(first_chanel_only), block_size):
+            block = get_block(first_chanel_only, start_with, block_size)
+            frequencies.append(get_frequency_for_one_block(block, lower_limit, upper_limit, freq_width))
 
-            frequencies = []
-            for start_with in range(0, len(first_chanel_only), block_size):
-                block = get_block(first_chanel_only, start_with, block_size)
-                frequencies.append(get_frequency_for_one_block(block, lower_limit, upper_limit, freq_width))
+        freq = np.median(frequencies)
 
-            freq = np.median(frequencies)
+        answer = get_answer(freq, threshold)
 
-            answer = get_answer(freq, threshold)
+        print(freq, answer, correct_answer)
 
-            print(freq, answer, correct_answer)
-
-            if answer == correct_answer == women_answer:
-                kk += 1
-            elif answer == correct_answer == men_answer:
-                mm += 1
-            elif answer == women_answer:
-                km += 1
-            else:
-                mk += 1
-
-        if km > mk:
-            threshold += threshold_change
-        elif km < mk:
-            threshold -= threshold_change
-        print(mm, kk, km, mk)
-
-        if minimal_mistake >= km + mk:
-            minimal_mistake = km + mk
+        if answer == correct_answer == women_answer:
+            kk += 1
+        elif answer == correct_answer == men_answer:
+            mm += 1
+        elif answer == women_answer:
+            km += 1
         else:
-            break
+            mk += 1
 
-    print(threshold, minimal_mistake)
+    print(mm, kk, km, mk)
