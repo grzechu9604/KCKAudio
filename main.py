@@ -72,12 +72,12 @@ def get_frequency_for_blocks(blocks, lower_limit, upper_limit, freq_width):
 
 if __name__ == '__main__':
     block_size = 4096
-    upper_limit = 350
+    upper_limit = 250
     lower_limit = 70
     women_answer = 'K'
     men_answer = 'M'
 
-    best_threshold = threshold = 162
+    best_threshold = threshold = 157
     threshold_change = 1
     minimal_mistake = 100000
 
